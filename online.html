@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>最大在线设备</title>
+    <script src="moment.js"></script>
+    <script src="chart.min.js"></script>
+    <script src="utils.js"></script>
+    <style>
+        canvas {
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+        }
+    </style>
+</head>
+
+<body>
+<div style="position: relative; height:40vh; width:80vw">
+    <p>最大在线设备</p>
+    <canvas id="chart"></canvas>
+</div>
+<br>
+<br>
+表格类型：
+<label for="type">图表类型：</label><select id="type">
+    <option value="line">线形图</option>
+    <option value="bar">柱状图</option>
+</select>
+
+<label for="unit">单位</label><select id="unit">
+    <option value="second">秒</option>
+    <option value="minute">分</option>
+    <option value="hour">时</option>
+    <option value="day">天</option>
+    <option value="month">月</option>
+    <option value="year">年</option>
+</select>
+<button id="update">更新</button>
+<script>
+    function generateData() {
+        const unit = document.getElementById('unit').value;
+
+        function unitLessThanDay() {
+            return unit === 'second' || unit === 'minute' || unit === 'hour';
+        }
+
+        function beforeNineThirty(date) {
+            return date.hour() < 9 || (date.hour() === 9 && date.minute() < 30);
+        }
+
+
+        function outsideMarketHours(date) {
+            if (date.isoWeekday() > 5) {
+                return true;
+            }
+            return !!(unitLessThanDay() && (beforeNineThirty(date) || date.hour() > 16));
+        }
+
+        function randomNumber(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function randomBar(date, lastClose) {
+            const open = randomNumber(lastClose * 0.95, lastClose * 1.05);
+            const close = randomNumber(open * 0.95, open * 1.05);
+            return {
+                t: date.valueOf(),
+                y: Math.round(close)
+            };
+        }
+
+        let date = moment('1月 01 2020', 'MMM DD YYYY');
+        date.locale('zh-cn');
+        const now = moment();
+        const data = [];
+        const lessThanDay = unitLessThanDay();
+        for (; data.length < 600 && date.isBefore(now); date = date.clone().add(1, unit).startOf(unit)) {
+            if (outsideMarketHours(date)) {
+                if (!lessThanDay || !beforeNineThirty(date)) {
+                    date = date.clone().add(date.isoWeekday() >= 5 ? 8 - date.isoWeekday() : 1, 'day');
+                }
+                if (lessThanDay) {
+                    date = date.hour(9).minute(30).second(0);
+                }
+            }
+            data.push(randomBar(date, data.length > 0 ? data[data.length - 1].y : 30));
+        }
+
+        return data;
+    }
+
+    const ctx = document.getElementById('chart').getContext('2d');
+    ctx.canvas.width = 1000;
+    ctx.canvas.height = 300;
+
+    const color = Chart.helpers.color;
+    const cfg = {
+        data: {
+            datasets: [
+                {
+                    label: '自动驾驶在线数量',
+                    backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
+                    borderColor: window.chartColors.red,
+                    data: generateData(),
+                    type: 'line',
+                    pointRadius: 0,
+                    fill: false,
+                    lineTension: 0,
+                    borderWidth: 2
+                },
+                /* {
+                     label: '平地仪在线数量',
+                     backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
+                     borderColor: window.chartColors.blue,
+                     data: generateData(),
+                     type: 'line',
+                     pointRadius: 0,
+                     fill: false,
+                     lineTension: 0,
+                     borderWidth: 2
+                 },
+                 {
+                     label: '全部设备在线数量',
+                     backgroundColor: color(window.chartColors.yellow).alpha(0.5).rgbString(),
+                     borderColor: window.chartColors.yellow,
+                     data: generateData(),
+                     type: 'line',
+                     pointRadius: 0,
+                     fill: false,
+                     lineTension: 0,
+                     borderWidth: 2
+                 }*/
+            ]
+        },
+        options: {
+            animation: {
+                duration: 0
+            },
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    distribution: 'series',
+                    offset: true,
+                    ticks: {
+                        major: {
+                            enabled: true,
+                            fontStyle: 'bold'
+                        },
+                        source: 'data',
+                        autoSkip: true,
+                        autoSkipPadding: 75,
+                        maxRotation: 0,
+                        sampleSize: 100
+                    },
+                    afterBuildTicks: function (scale, ticks) {
+                        const majorUnit = scale._majorUnit;
+                        const firstTick = ticks[0];
+                        let i, ilen, val, tick, currMajor, lastMajor;
+
+                        val = moment(ticks[0].value);
+                        firstTick.major = (majorUnit === 'minute' && val.second() === 0)
+                            || (majorUnit === 'hour' && val.minute() === 0)
+                            || (majorUnit === 'day' && val.hour() === 9)
+                            || (majorUnit === 'month' && val.date() <= 3 && val.isoWeekday() === 1)
+                            || (majorUnit === 'year' && val.month() === 0);
+                        lastMajor = val.get(majorUnit);
+
+                        for (i = 1, ilen = ticks.length; i < ilen; i++) {
+                            tick = ticks[i];
+                            val = moment(tick.value);
+                            currMajor = val.get(majorUnit);
+                            tick.major = currMajor !== lastMajor;
+                            lastMajor = currMajor;
+                        }
+                        return ticks;
+                    }
+                }],
+                yAxes: [{
+                    gridLines: {
+                        drawBorder: false
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: '最大在线设备数量（台）'
+                    }
+                }]
+            },
+            tooltips: {
+                intersect: false,
+                mode: 'index',
+                callbacks: {
+                    label: function (tooltipItem, myData) {
+                        let label = myData.datasets[tooltipItem.datasetIndex].label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        label += parseFloat(tooltipItem.value);
+                        return label;
+                    }
+                }
+            }
+        }
+    };
+
+    const chart = new Chart(ctx, cfg);
+
+    document.getElementById('update').addEventListener('click', function() {
+        const type = document.getElementById('type').value;
+        const dataset = chart.config.data.datasets[0];
+        dataset.type = type;
+        dataset.data = generateData();
+        chart.update();
+    })
+</script>
+</body>
+</html>
