@@ -24,69 +24,72 @@
 <br>
 表格类型：
 <label for="type">图表类型：</label><select id="type">
-    <option value="line">线形图</option>
+    <option value="line" selected>线形图</option>
     <option value="bar">柱状图</option>
 </select>
 
 <label for="unit">单位</label><select id="unit">
-    <option value="second">秒</option>
-    <option value="minute">分</option>
-    <option value="hour">时</option>
+
     <option value="day">天</option>
+    <option value="week">周</option>
     <option value="month">月</option>
-    <option value="year">年</option>
 </select>
 <button id="update">更新</button>
+<button id="test" onclick="test1()">测试</button>
 <script>
+    function test1() {
+        let day = moment(1614306021000).hour()
+        console.log(day)
+    }
+    function randomNumber(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+    function generateTY(time) {
+        return {
+            t: time,
+            y: randomNumber(500,1000)
+        }
+    }
+    function generateIntervalFiveMinutesData() {
+        let startTime;
+        let now = Date.now()
+        //let startTime = now - 60*60*24*30*1000
+        let data = []
+        for (startTime = now - 60*60*24*30*1000; startTime < now; startTime += 5*60*1000) {
+            data.push(generateTY(startTime))
+        }
+        return data
+    }
+    function generateIntervalOneDayData() {
+        let startTime;
+        let now = Date.now()
+        //let startTime = now - 60*60*24*30*1000
+        let data = []
+        for (startTime = now - 60*60*24*30*1000; startTime < now; startTime += 24*60*60*1000) {
+            data.push(generateTY(startTime))
+        }
+        return data
+    }
     function generateData() {
         const unit = document.getElementById('unit').value;
-
-        function unitLessThanDay() {
-            return unit === 'second' || unit === 'minute' || unit === 'hour';
-        }
-
-        function beforeNineThirty(date) {
-            return date.hour() < 9 || (date.hour() === 9 && date.minute() < 30);
-        }
-
-
-        function outsideMarketHours(date) {
-            if (date.isoWeekday() > 5) {
-                return true;
+        let data;
+        switch (unit) {
+            case 'day' : {
+                data = generateIntervalFiveMinutesData().slice(8500)
             }
-            return !!(unitLessThanDay() && (beforeNineThirty(date) || date.hour() > 16));
-        }
+                break;
 
-        function randomNumber(min, max) {
-            return Math.random() * (max - min) + min;
-        }
-
-        function randomBar(date, lastClose) {
-            const open = randomNumber(lastClose * 0.95, lastClose * 1.05);
-            const close = randomNumber(open * 0.95, open * 1.05);
-            return {
-                t: date.valueOf(),
-                y: Math.round(close)
-            };
-        }
-
-        let date = moment('1月 01 2020', 'MMM DD YYYY');
-        date.locale('zh-cn');
-        const now = moment();
-        const data = [];
-        const lessThanDay = unitLessThanDay();
-        for (; data.length < 600 && date.isBefore(now); date = date.clone().add(1, unit).startOf(unit)) {
-            if (outsideMarketHours(date)) {
-                if (!lessThanDay || !beforeNineThirty(date)) {
-                    date = date.clone().add(date.isoWeekday() >= 5 ? 8 - date.isoWeekday() : 1, 'day');
-                }
-                if (lessThanDay) {
-                    date = date.hour(9).minute(30).second(0);
-                }
+            case 'week' : {
+                 data = generateIntervalFiveMinutesData().slice(8000)
             }
-            data.push(randomBar(date, data.length > 0 ? data[data.length - 1].y : 30));
-        }
+                break;
 
+            case 'month' : {
+
+                data = generateIntervalFiveMinutesData()
+            }
+
+        }
         return data;
     }
 
@@ -155,15 +158,10 @@
                     },
                     afterBuildTicks: function (scale, ticks) {
                         const majorUnit = scale._majorUnit;
-                        const firstTick = ticks[0];
                         let i, ilen, val, tick, currMajor, lastMajor;
 
                         val = moment(ticks[0].value);
-                        firstTick.major = (majorUnit === 'minute' && val.second() === 0)
-                            || (majorUnit === 'hour' && val.minute() === 0)
-                            || (majorUnit === 'day' && val.hour() === 9)
-                            || (majorUnit === 'month' && val.date() <= 3 && val.isoWeekday() === 1)
-                            || (majorUnit === 'year' && val.month() === 0);
+
                         lastMajor = val.get(majorUnit);
 
                         for (i = 1, ilen = ticks.length; i < ilen; i++) {
@@ -183,7 +181,8 @@
                     scaleLabel: {
                         display: true,
                         labelString: '最大在线设备数量（台）'
-                    }
+                    },
+                    stacked: true
                 }]
             },
             tooltips: {
