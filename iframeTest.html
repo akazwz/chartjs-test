@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>iframe</title>
+    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <script src="{{ asset('/js/draco.js') }}" defer></script>
+    <script src="{{ asset('/js/draco.js') }}" defer></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.5.3/js/bootstrap.min.js"></script>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.5.3/css/bootstrap.css" rel="stylesheet">
+</head>
+<body>
+    <div>
+        <input type="text" id="fromDateTime">
+    </div>
+</body>
+</html>
+<script>
+    $("#fromDateTime").datetimepicker({
+        fontAwesome:'font-awesome',
+        forceParse: 0,//设置为0，时间不会跳转1899，会显示当前时间。
+        language: 'zh-CN',//显示中文
+        format: 'yyyy-mm-dd hh:ii',
+        weekStart: 1,
+        initialDate: new Date(),//初始化当前日期
+        endDate: new Date(),
+    });
+</script>
